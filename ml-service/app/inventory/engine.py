@@ -63,16 +63,16 @@ class InventoryOptimizationEngine:
         raw_recommended_order = round(float(raw_recommended_order), 4)
         recommended_order = round(float(recommended_order), 4)
         
-        # 6. Risk & Status Classification
+        # 6. Risk & Status Classification (Uses lead_time_demand for horizon-leadtime consistency)
         risk_level = evaluate_stockout_risk(
             current_inventory=inp.current_inventory,
-            total_forecast_demand=total_demand,
+            lead_time_demand=lead_time_demand,
             reorder_point=reorder_point
         )
         
         inv_status = evaluate_inventory_status(
             current_inventory=inp.current_inventory,
-            total_forecast_demand=total_demand,
+            lead_time_demand=lead_time_demand,
             reorder_point=reorder_point,
             target_inventory=target_inventory
         )

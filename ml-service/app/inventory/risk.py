@@ -2,18 +2,18 @@ from typing import Tuple
 
 def evaluate_stockout_risk(
     current_inventory: float,
-    total_forecast_demand: float,
+    lead_time_demand: float,
     reorder_point: float
 ) -> str:
     """
     Classify stockout risk level (HIGH, MEDIUM, LOW).
     
     Rules:
-    - HIGH: Current inventory is less than total near-term forecast demand.
-    - MEDIUM: Current inventory covers near-term demand, but is less than the reorder point.
-    - LOW: Current inventory meets or exceeds the reorder point threshold.
+    - HIGH: Current inventory is less than lead-time demand (stockout likely before replenishment arrives).
+    - MEDIUM: Current inventory covers lead-time demand, but is less than reorder point (safety stock is breached).
+    - LOW: Current inventory meets or exceeds reorder point threshold.
     """
-    if current_inventory < total_forecast_demand:
+    if current_inventory < lead_time_demand:
         return "HIGH"
     elif current_inventory < reorder_point:
         return "MEDIUM"
@@ -22,7 +22,7 @@ def evaluate_stockout_risk(
 
 def evaluate_inventory_status(
     current_inventory: float,
-    total_forecast_demand: float,
+    lead_time_demand: float,
     reorder_point: float,
     target_inventory: float
 ) -> str:
@@ -30,12 +30,12 @@ def evaluate_inventory_status(
     Classify overall operational inventory status (CRITICAL, REORDER, WATCH, HEALTHY).
     
     Rules:
-    - CRITICAL: Current stock is below total near-term forecast demand (Stockout Risk = HIGH).
-    - REORDER: Current stock is below reorder point (Needs replenishment order).
+    - CRITICAL: Current stock is below lead-time demand (Stockout Risk = HIGH).
+    - REORDER: Current stock covers lead-time demand but is below reorder point (Needs replenishment order).
     - WATCH: Current stock meets reorder point, but buffer is tight (< 1.2 * target_inventory).
     - HEALTHY: Current stock is comfortably stocked (>= 1.2 * target_inventory).
     """
-    if current_inventory < total_forecast_demand:
+    if current_inventory < lead_time_demand:
         return "CRITICAL"
     elif current_inventory < reorder_point:
         return "REORDER"
