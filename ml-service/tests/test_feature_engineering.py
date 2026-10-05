@@ -85,3 +85,27 @@ def test_date_and_event_features():
     assert df.loc[1, "is_weekend"] == 1
     assert df.loc[0, "is_event_day"] == 0
     assert df.loc[1, "is_event_day"] == 1
+
+def test_state_specific_snap_logic():
+    """Verify that is_snap_day correctly evaluates store state (CA -> snap_CA, TX -> snap_TX, WI -> snap_WI)."""
+    df = pd.DataFrame({
+        "state_id": ["CA", "TX", "WI", "TX"],
+        "event_name_1": [None, None, None, None],
+        "snap_CA": [1, 1, 0, 0],  # Note: snap_CA is 1 on row 1, but row 1 state is TX
+        "snap_TX": [0, 1, 0, 0],
+        "snap_WI": [0, 0, 1, 0]
+    })
+    
+    res = create_event_features(df)
+    
+    # Row 0: State CA, snap_CA=1 -> is_snap_day must be 1
+    assert res.loc[0, "is_snap_day"] == 1
+    
+    # Row 1: State TX, snap_TX=1 (even though snap_CA=1) -> is_snap_day must be 1 (derived from snap_TX)
+    assert res.loc[1, "is_snap_day"] == 1
+    
+    # Row 2: State WI, snap_WI=1 -> is_snap_day must be 1
+    assert res.loc[2, "is_snap_day"] == 1
+    
+    # Row 3: State TX, snap_TX=0 (even if snap_CA was 1) -> is_snap_day must be 0
+    assert res.loc[3, "is_snap_day"] == 0
