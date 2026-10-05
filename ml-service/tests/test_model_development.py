@@ -71,7 +71,7 @@ def test_feature_preparation_excludes_target():
     assert "id" not in feature_names
     assert y.iloc[0] == 5
 
-def test_models_no_nan_predictions():
+def test_prediction_shapes_and_equality():
     dates = pd.date_range("2020-01-01", periods=50, freq="D")
     df = pd.DataFrame({
         "id": ["s1_i1"] * 50,
@@ -116,19 +116,19 @@ def test_models_no_nan_predictions():
     
     baseline = SeasonalNaiveBaseline(lag_col="lag_7")
     pred_base = baseline.predict(val_df)
-    assert len(pred_base) == len(val_df)
-    assert not np.isnan(pred_base).any()
     
     rf = RandomForestForecaster(n_estimators=10, max_depth=4, random_state=42)
     rf.fit(X_train, y_train)
     pred_rf = rf.predict(X_val)
-    assert len(pred_rf) == len(val_df)
-    assert not np.isnan(pred_rf).any()
-    assert (pred_rf >= 0).all()
     
     xgb = XGBoostForecaster(n_estimators=10, max_depth=3, random_state=42)
     xgb.fit(X_train, y_train)
     pred_xgb = xgb.predict(X_val)
-    assert len(pred_xgb) == len(val_df)
+    
+    # Assert exact prediction shape equality across all models and validation target
+    assert len(y_val) == len(pred_rf) == len(pred_xgb) == len(pred_base) == 10
+    assert not np.isnan(pred_rf).any()
     assert not np.isnan(pred_xgb).any()
+    assert not np.isnan(pred_base).any()
+    assert (pred_rf >= 0).all()
     assert (pred_xgb >= 0).all()
