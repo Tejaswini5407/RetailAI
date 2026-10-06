@@ -31,6 +31,6 @@ class ForecastResponse(BaseModel):
     """Schema for demand forecast API response."""
     status: str = "success"
     model_name: str = "Random Forest"
-    model_version: str = "1.0.0"
+    model_version: Optional[str] = Field(None, description="Model version identifier if persisted in metadata")
     predictions: List[SinglePrediction]
     count: int

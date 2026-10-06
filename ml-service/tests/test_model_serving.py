@@ -80,6 +80,8 @@ def test_predictor_single_item():
     response = predictor.predict(request)
 
     assert isinstance(response, ForecastResponse)
+    assert response.model_name == "Random Forest"
+    assert response.model_version is None
     assert response.status == "success"
     assert response.count == 1
     assert len(response.predictions) == 1
@@ -158,6 +160,7 @@ def test_forecast_api_endpoint():
 
     assert data["status"] == "success"
     assert data["model_name"] == "Random Forest"
+    assert data["model_version"] is None
     assert data["count"] == 2
     assert len(data["predictions"]) == 2
 

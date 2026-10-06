@@ -32,12 +32,14 @@ class ModelContainer:
         model_object: Any,
         model_name: str,
         feature_names: List[str],
+        model_version: Optional[str] = None,
         metrics: Optional[Dict[str, float]] = None,
         split_info: Optional[Dict[str, Any]] = None
     ):
         self.model_object = model_object
         self.model_name = model_name
         self.feature_names = feature_names
+        self.model_version = model_version
         self.metrics = metrics or {}
         self.split_info = split_info or {}
 
@@ -84,12 +86,14 @@ def load_trained_model(model_path: Optional[str] = None, force_reload: bool = Fa
         if isinstance(artifact, dict):
             model_obj = artifact.get("model_object")
             model_name = artifact.get("model_name", "Random Forest")
+            model_version = artifact.get("model_version")  # None if not persisted in artifact
             feature_names = artifact.get("feature_names", [])
             metrics = artifact.get("metrics", {})
             split_info = artifact.get("split_info", {})
         else:
             model_obj = artifact
             model_name = getattr(model_obj, "model_name", "Random Forest")
+            model_version = getattr(model_obj, "model_version", None)
             feature_names = getattr(model_obj, "feature_names", [])
             metrics = {}
             split_info = {}
@@ -101,6 +105,7 @@ def load_trained_model(model_path: Optional[str] = None, force_reload: bool = Fa
             model_object=model_obj,
             model_name=model_name,
             feature_names=feature_names,
+            model_version=model_version,
             metrics=metrics,
             split_info=split_info
         )

@@ -207,7 +207,7 @@ $$\hat{y}_{\text{rounded}} = \text{round}(\hat{y}_{\text{clipped}})$$
 {
   "status": "success",
   "model_name": "Random Forest",
-  "model_version": "1.0.0",
+  "model_version": null,
   "predictions": [
     {
       "item_id": "FOODS_1_001",
@@ -220,6 +220,8 @@ $$\hat{y}_{\text{rounded}} = \text{round}(\hat{y}_{\text{clipped}})$$
   "count": 1
 }
 ```
+
+> **Note on Model Versioning:** `model_name` is `"Random Forest"`. `model_version` returns `null` because Phase 4 model artifacts do not persist explicit semantic version tags in joblib metadata. Future model management iterations can extend artifact metadata without breaking backward compatibility.
 
 ---
 

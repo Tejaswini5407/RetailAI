@@ -103,7 +103,7 @@ class DemandPredictor:
         return ForecastResponse(
             status="success",
             model_name=self.model_name,
-            model_version="1.0.0",
+            model_version=self.container.model_version,
             predictions=predictions,
             count=len(predictions)
         )
