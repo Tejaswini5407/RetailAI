@@ -11,7 +11,8 @@ import java.util.Objects;
 @Table(
     name = "stores",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_stores_org_store_code", columnNames = {"organization_id", "store_code"})
+        @UniqueConstraint(name = "uk_stores_org_store_code", columnNames = {"organization_id", "store_code"}),
+        @UniqueConstraint(name = "uk_stores_org_id", columnNames = {"organization_id", "id"})
     }
 )
 public class Store {

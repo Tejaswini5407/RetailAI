@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,6 +25,7 @@ public class PersistenceTest {
     @Autowired private ProductRepository productRepo;
     @Autowired private SaleRepository saleRepo;
     @Autowired private InventoryRepository inventoryRepo;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void setUp() {
@@ -183,26 +184,32 @@ public class PersistenceTest {
     }
 
     @Test
-    @DisplayName("L. Negative units_sold is rejected by validation / DB check constraint")
-    void testNegativeUnitsSoldRejected() {
-        Organization org = orgRepo.save(new Organization("ORG-NEG-SALE", "Neg Sale Retailer"));
+    @DisplayName("L. Direct SQL test: PostgreSQL CHECK constraint chk_sales_units_sold rejects negative units_sold")
+    void testDatabaseCheckConstraintNegativeUnitsSold() {
+        Organization org = orgRepo.save(new Organization("ORG-CHECK-1", "Check Retailer 1"));
         Store store = storeRepo.save(new Store(org, "S1", "Store 1", "CA", "LA"));
         Product prod = productRepo.save(new Product(org, "P1", "Prod 1", "FOODS", "FOODS_1"));
 
-        assertThrows(Exception.class, () -> {
-            saleRepo.saveAndFlush(new Sale(org, store, prod, LocalDate.now(), -5, new BigDecimal("2.50")));
+        assertThrows(DataIntegrityViolationException.class, () -> {
+            jdbcTemplate.update(
+                "INSERT INTO sales (organization_id, store_id, product_id, sale_date, units_sold, unit_price) VALUES (?, ?, ?, CURRENT_DATE, ?, ?)",
+                org.getId(), store.getId(), prod.getId(), -5, 2.50
+            );
         });
     }
 
     @Test
-    @DisplayName("M. Negative inventory quantity is rejected by validation / DB check constraint")
-    void testNegativeInventoryRejected() {
-        Organization org = orgRepo.save(new Organization("ORG-NEG-INV", "Neg Inv Retailer"));
+    @DisplayName("M. Direct SQL test: PostgreSQL CHECK constraint chk_inventory_qty_on_hand rejects negative quantity_on_hand")
+    void testDatabaseCheckConstraintNegativeInventory() {
+        Organization org = orgRepo.save(new Organization("ORG-CHECK-2", "Check Retailer 2"));
         Store store = storeRepo.save(new Store(org, "S1", "Store 1", "CA", "LA"));
         Product prod = productRepo.save(new Product(org, "P1", "Prod 1", "FOODS", "FOODS_1"));
 
-        assertThrows(Exception.class, () -> {
-            inventoryRepo.saveAndFlush(new Inventory(org, store, prod, -10, 0));
+        assertThrows(DataIntegrityViolationException.class, () -> {
+            jdbcTemplate.update(
+                "INSERT INTO inventory (organization_id, store_id, product_id, quantity_on_hand, quantity_on_order) VALUES (?, ?, ?, ?, ?)",
+                org.getId(), store.getId(), prod.getId(), -10, 0
+            );
         });
     }
 
