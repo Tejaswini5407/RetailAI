@@ -31,6 +31,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage());
     }
 
+    @ExceptionHandler(OrganizationAlreadyExistsException.class)
+    public ResponseEntity<Map<String, Object>> handleOrgAlreadyExists(OrganizationAlreadyExistsException ex) {
+        return buildResponse(HttpStatus.CONFLICT, "Conflict", ex.getMessage());
+    }
+
     @ExceptionHandler(OrganizationNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleOrgNotFound(OrganizationNotFoundException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());

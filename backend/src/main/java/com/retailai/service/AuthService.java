@@ -6,8 +6,10 @@ import com.retailai.dto.auth.AuthResponse;
 import com.retailai.dto.auth.LoginRequest;
 import com.retailai.dto.auth.RegisterRequest;
 import com.retailai.dto.auth.UserSummaryDto;
+import com.retailai.domain.UserRole;
 import com.retailai.exception.EmailAlreadyExistsException;
 import com.retailai.exception.InvalidCredentialsException;
+import com.retailai.exception.OrganizationAlreadyExistsException;
 import com.retailai.exception.OrganizationNotFoundException;
 import com.retailai.repository.OrganizationRepository;
 import com.retailai.repository.UserRepository;
@@ -43,16 +45,24 @@ public class AuthService {
             throw new EmailAlreadyExistsException("Email '" + request.getEmail() + "' is already registered");
         }
 
-        Organization organization = organizationRepository.findByCode(request.getOrganizationCode())
-                .orElseGet(() -> {
-                    String orgName = (request.getOrganizationName() != null && !request.getOrganizationName().isBlank())
-                            ? request.getOrganizationName()
-                            : request.getOrganizationCode() + " Organization";
-                    return organizationRepository.save(new Organization(request.getOrganizationCode(), orgName));
-                });
+        if (organizationRepository.existsByCode(request.getOrganizationCode())) {
+            throw new OrganizationAlreadyExistsException(
+                "Organization with code '" + request.getOrganizationCode() + "' already exists. Public registration cannot join an existing organization."
+            );
+        }
+
+        String orgName = (request.getOrganizationName() != null && !request.getOrganizationName().isBlank())
+                ? request.getOrganizationName()
+                : request.getOrganizationCode() + " Organization";
+
+        Organization organization = organizationRepository.save(new Organization(request.getOrganizationCode(), orgName));
+
+        // Public registration always assigns ADMIN role to the founder of a new organization.
+        // Client request role is ignored to prevent privilege escalation.
+        UserRole assignedRole = UserRole.ADMIN;
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
-        User user = new User(organization, request.getEmail(), request.getName(), hashedPassword, request.getRole());
+        User user = new User(organization, request.getEmail(), request.getName(), hashedPassword, assignedRole);
         User savedUser = userRepository.save(user);
 
         CustomUserDetails userDetails = new CustomUserDetails(savedUser);
@@ -68,6 +78,31 @@ public class AuthService {
         );
 
         return new AuthResponse(token, jwtService.getExpirationMs(), summary);
+    }
+
+    @Transactional
+    public UserSummaryDto createUserInTenant(RegisterRequest request, Long tenantId) {
+        Organization organization = organizationRepository.findById(tenantId)
+                .orElseThrow(() -> new OrganizationNotFoundException("Organization not found for ID: " + tenantId));
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new EmailAlreadyExistsException("Email '" + request.getEmail() + "' is already registered");
+        }
+
+        UserRole roleToAssign = (request.getRole() != null) ? request.getRole() : UserRole.STORE_MANAGER;
+
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        User user = new User(organization, request.getEmail(), request.getName(), hashedPassword, roleToAssign);
+        User savedUser = userRepository.save(user);
+
+        return new UserSummaryDto(
+            savedUser.getId(),
+            savedUser.getEmail(),
+            savedUser.getName(),
+            organization.getId(),
+            organization.getCode(),
+            savedUser.getRole()
+        );
     }
 
     @Transactional(readOnly = true)
