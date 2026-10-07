@@ -24,6 +24,10 @@ public final class TenantContext {
                 .orElseThrow(() -> new IllegalStateException("No authenticated tenant found in security context"));
     }
 
+    public static Long getTenantId() {
+        return getCurrentOrganizationId();
+    }
+
     public static String getCurrentOrganizationCode() {
         return getCurrentUser()
                 .map(CustomUserDetails::getOrganizationCode)
@@ -40,5 +44,9 @@ public final class TenantContext {
         return getCurrentUser()
                 .map(CustomUserDetails::getRole)
                 .orElseThrow(() -> new IllegalStateException("No authenticated role found in security context"));
+    }
+
+    public static void clear() {
+        // SecurityContextHolder handles request lifecycle cleanup; hook preserved for thread safety
     }
 }

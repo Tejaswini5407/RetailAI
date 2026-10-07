@@ -1,6 +1,8 @@
 package com.retailai.repository;
 
 import com.retailai.domain.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,5 +13,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     List<User> findByOrganizationId(Long organizationId);
+    Page<User> findByOrganizationId(Long organizationId, Pageable pageable);
+    Optional<User> findByOrganizationIdAndId(Long organizationId, Long id);
     boolean existsByEmail(String email);
 }
