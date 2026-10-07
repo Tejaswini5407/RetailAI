@@ -134,14 +134,18 @@ public class InventoryService {
             stockoutRisk = "LOW";
         }
 
-        // Inventory status classification
+        double targetInventory = totalForecastDemand + safetyStock;
+
+        // Inventory status classification (Phase 5 exact rules: CRITICAL, REORDER, WATCH, HEALTHY)
         String inventoryStatus;
-        if (currentInventory == 0) {
-            inventoryStatus = "OUT_OF_STOCK";
+        if (currentInventory < leadTimeDemand) {
+            inventoryStatus = "CRITICAL";
         } else if (currentInventory < reorderPoint) {
-            inventoryStatus = "BELOW_REORDER_POINT";
+            inventoryStatus = "REORDER";
+        } else if (currentInventory < (targetInventory * 1.2)) {
+            inventoryStatus = "WATCH";
         } else {
-            inventoryStatus = "ADEQUATE";
+            inventoryStatus = "HEALTHY";
         }
 
         // Order recommendation (Phase 5 MOQ and net demand deduction rules)

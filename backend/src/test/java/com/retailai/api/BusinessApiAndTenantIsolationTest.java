@@ -307,7 +307,7 @@ public class BusinessApiAndTenantIsolationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.averageDailyDemand").value(10.0))
                 .andExpect(jsonPath("$.stockoutRisk").value("HIGH"))
-                .andExpect(jsonPath("$.inventoryStatus").value("BELOW_REORDER_POINT"))
+                .andExpect(jsonPath("$.inventoryStatus").value("CRITICAL"))
                 .andExpect(jsonPath("$.recommendedOrderQuantity").value(145)); // rawOrder = max(0, 140 + 20 - 5 - 10) = 145 >= moq(50)
     }
 
