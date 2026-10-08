@@ -1,23 +1,54 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './routes/ProtectedRoute';
+
+import Layout from './components/layout/Layout';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import Stores from './pages/Stores';
+import Products from './pages/Products';
+import Sales from './pages/Sales';
+import Inventory from './pages/Inventory';
+import Assessment from './pages/Assessment';
+import Forecasts from './pages/Forecasts';
+import Users from './pages/Users';
+import Profile from './pages/Profile';
 
 function App() {
   return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
-      <h1>RetailAI</h1>
-      <p style={{ fontSize: '1.2rem', color: '#475569' }}>
-        Intelligent Demand Forecasting and Inventory Optimization Platform
-      </p>
-      <div style={{
-        marginTop: '2rem',
-        padding: '1.5rem',
-        backgroundColor: '#ffffff',
-        borderRadius: '8px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-      }}>
-        <h2>Phase 1 — Foundation Verified</h2>
-        <p>Frontend (React + Vite) is up and running.</p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public Authentication Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* Protected Application Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/stores" element={<Stores />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/sales" element={<Sales />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/assessment" element={<Assessment />} />
+              <Route path="/forecasts" element={<Forecasts />} />
+              <Route path="/profile" element={<Profile />} />
+
+              {/* Admin-only Route */}
+              <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+                <Route path="/users" element={<Users />} />
+              </Route>
+            </Route>
+          </Route>
+
+          {/* Fallback Route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
