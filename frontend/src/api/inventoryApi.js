@@ -2,7 +2,19 @@ import apiClient from './axios';
 
 export const inventoryApi = {
   getInventory: async (params = {}) => {
-    const { page = 0, size = 10, storeId, productId } = params;
+    let page = 0;
+    let size = 10;
+    let storeId, productId;
+
+    if (typeof params === 'number' || typeof params === 'string') {
+      page = params;
+    } else if (typeof params === 'object' && params !== null) {
+      page = params.page !== undefined ? params.page : 0;
+      size = params.size !== undefined ? params.size : 10;
+      storeId = params.storeId;
+      productId = params.productId;
+    }
+
     let query = `/api/v1/inventory?page=${page}&size=${size}`;
     if (storeId) query += `&storeId=${storeId}`;
     if (productId) query += `&productId=${productId}`;

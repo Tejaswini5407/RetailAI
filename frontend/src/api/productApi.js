@@ -1,7 +1,21 @@
 import apiClient from './axios';
 
+const normalizePageParams = (pageOrParams = 0, sizeArg = 10) => {
+  let page = 0;
+  let size = 10;
+  if (typeof pageOrParams === 'object' && pageOrParams !== null) {
+    page = pageOrParams.page !== undefined ? pageOrParams.page : 0;
+    size = pageOrParams.size !== undefined ? pageOrParams.size : 10;
+  } else if (typeof pageOrParams === 'number' || typeof pageOrParams === 'string') {
+    page = pageOrParams;
+    size = sizeArg;
+  }
+  return { page, size };
+};
+
 export const productApi = {
-  getProducts: async (page = 0, size = 10) => {
+  getProducts: async (pageOrParams = 0, sizeArg = 10) => {
+    const { page, size } = normalizePageParams(pageOrParams, sizeArg);
     const response = await apiClient.get(`/api/v1/products?page=${page}&size=${size}`);
     return response.data;
   },
