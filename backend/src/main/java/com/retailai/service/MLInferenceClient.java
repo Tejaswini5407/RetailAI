@@ -1,6 +1,7 @@
 package com.retailai.service;
 
 import com.retailai.dto.forecast.ForecastResponseDto;
+import com.retailai.exception.MLServiceUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,20 +83,10 @@ public class MLInferenceClient {
                 }
             }
         } catch (Exception e) {
-            logger.warn("ML Service call failed ({}). Falling back to baseline simulation.", e.getMessage());
+            logger.error("ML Service call failed ({}). Returning 503 Service Unavailable.", e.getMessage());
+            throw new MLServiceUnavailableException("Forecast service is temporarily unavailable. Please try again later.");
         }
 
-        // Safe fallback if ML service is unreachable during offline tests
-        return new ForecastResponseDto(
-            storeId,
-            storeCode,
-            productId,
-            sku,
-            date,
-            12.5,
-            13,
-            "Random Forest (Fallback)",
-            null
-        );
+        throw new MLServiceUnavailableException("Forecast service is temporarily unavailable. Please try again later.");
     }
 }

@@ -25,11 +25,22 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
+import org.mockito.Mockito;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import java.util.List;
+import java.util.Map;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 public class BusinessApiAndTenantIsolationTest {
 
     @Autowired private MockMvc mockMvc;
+    @MockBean private RestTemplate restTemplate;
     @Autowired private AuthService authService;
     @Autowired private StoreService storeService;
     @Autowired private ProductService productService;
@@ -312,8 +323,16 @@ public class BusinessApiAndTenantIsolationTest {
     }
 
     @Test
-    @DisplayName("6. Forecast Endpoint Integration")
+    @DisplayName("6. Forecast Endpoint Integration - Successful Model Call")
     void testForecastEndpointIntegration() throws Exception {
+        Map<String, Object> mockResponse = Map.of(
+            "model_name", "Random Forest",
+            "model_version", "1.0.0",
+            "predictions", List.of(Map.of("predicted_demand", 18.5, "rounded_demand", 19))
+        );
+        Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+                .thenReturn(ResponseEntity.ok(mockResponse));
+
         StoreResponseDto[] storeHolderA = new StoreResponseDto[1];
         ProductResponseDto[] prodHolderA = new ProductResponseDto[1];
 
@@ -340,6 +359,42 @@ public class BusinessApiAndTenantIsolationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.storeCode").value("STORE-FC"))
                 .andExpect(jsonPath("$.sku").value("SKU-FC"))
-                .andExpect(jsonPath("$.predictedDemand").exists());
+                .andExpect(jsonPath("$.predictedDemand").value(18.5))
+                .andExpect(jsonPath("$.modelName").value("Random Forest"));
+    }
+
+    @Test
+    @DisplayName("7. Forecast Endpoint Integration - FastAPI Service Unavailable (Returns HTTP 503)")
+    void testForecastEndpointWhenMLServiceUnavailable() throws Exception {
+        Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+                .thenThrow(new RuntimeException("Connection refused to ML microservice"));
+
+        StoreResponseDto[] storeHolderA = new StoreResponseDto[1];
+        ProductResponseDto[] prodHolderA = new ProductResponseDto[1];
+
+        runAs(authTenantA, () -> {
+            storeHolderA[0] = storeService.createStore(new CreateStoreRequestDto("STORE-ERR", "Store ERR", "CA", "LA"));
+            prodHolderA[0] = productService.createProduct(new CreateProductRequestDto("SKU-ERR", "Prod ERR", "Cat", "Dept"));
+        });
+
+        StoreResponseDto storeA = storeHolderA[0];
+        ProductResponseDto prodA = prodHolderA[0];
+
+        String forecastReqJson = String.format("""
+            {
+                "storeId": %d,
+                "productId": %d,
+                "date": "2026-04-25"
+            }
+            """, storeA.getId(), prodA.getId());
+
+        mockMvc.perform(post("/api/v1/forecasts")
+                .header("Authorization", "Bearer " + authTenantA.getAccessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(forecastReqJson))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.error").value("Service Unavailable"))
+                .andExpect(jsonPath("$.message").value("Forecast service is temporarily unavailable. Please try again later."));
     }
 }
