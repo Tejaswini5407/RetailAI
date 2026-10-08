@@ -7,8 +7,10 @@ const Register = () => {
   const [formData, setFormData] = useState({
     organizationName: '',
     organizationCode: '',
+    name: '',
     email: '',
-    password: ''
+    password: '',
+    role: 'ADMIN'
   });
   const [loading, setLoading] = useState(false);
   const { register, error, setError } = useAuth();
@@ -20,7 +22,7 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.organizationName || !formData.organizationCode || !formData.email || !formData.password) {
+    if (!formData.organizationName || !formData.organizationCode || !formData.name || !formData.email || !formData.password) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -78,6 +80,19 @@ const Register = () => {
           </div>
 
           <div className="form-group">
+            <label className="form-label">Admin Full Name</label>
+            <input
+              type="text"
+              name="name"
+              className="form-control"
+              placeholder="Jane Doe"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="form-group">
             <label className="form-label">Admin Email Address</label>
             <input
               type="email"
@@ -96,7 +111,7 @@ const Register = () => {
               type="password"
               name="password"
               className="form-control"
-              placeholder="Min 8 chars, uppercase, number, symbol"
+              placeholder="Min 6 characters"
               value={formData.password}
               onChange={handleChange}
               required

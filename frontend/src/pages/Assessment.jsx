@@ -21,7 +21,7 @@ const Assessment = () => {
   const [moq, setMoq] = useState('1');
 
   // Mode Specific Inputs
-  const [currentInventory, setCurrentInventory] = useState('15'); // For direct mode
+  const [forecastDemand, setForecastDemand] = useState('140'); // For direct mode (units)
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // For forecast mode
 
   const [loading, setLoading] = useState(false);
@@ -64,7 +64,7 @@ const Assessment = () => {
         const payload = {
           storeId: parseInt(storeId, 10),
           productId: parseInt(productId, 10),
-          currentInventory: parseInt(currentInventory, 10),
+          forecastDemand: parseFloat(forecastDemand),
           forecastHorizonDays: parseInt(forecastHorizonDays, 10),
           leadTimeDays: parseInt(leadTimeDays, 10),
           safetyStock: parseInt(safetyStock, 10),
@@ -106,6 +106,10 @@ const Assessment = () => {
 
   const assessment = getAssessmentObj();
   const forecast = getForecastObj();
+
+  const statusVal = assessment ? (assessment.inventoryStatus || assessment.status || 'HEALTHY') : null;
+  const recOrderQty = assessment ? (assessment.recommendedOrderQuantity ?? assessment.recommendedOrderQty ?? 0) : 0;
+  const isReorderRequired = assessment ? (recOrderQty > 0 || assessment.reorderRequired === true) : false;
 
   return (
     <div className="assessment-page flex-column gap-4">
@@ -150,7 +154,7 @@ const Assessment = () => {
               >
                 {stores.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.code} - {s.name}
+                    {s.storeCode || s.code} - {s.name}
                   </option>
                 ))}
               </select>
@@ -185,12 +189,14 @@ const Assessment = () => {
               </div>
             ) : (
               <div className="form-group">
-                <label className="form-label">Current Inventory On Hand</label>
+                <label className="form-label">Forecast Horizon Demand (Units)</label>
                 <input
                   type="number"
+                  step="0.01"
+                  min="0"
                   className="form-control"
-                  value={currentInventory}
-                  onChange={(e) => setCurrentInventory(e.target.value)}
+                  value={forecastDemand}
+                  onChange={(e) => setForecastDemand(e.target.value)}
                   required
                 />
               </div>
@@ -287,7 +293,7 @@ const Assessment = () => {
                 <div>
                   <div className="text-xs text-muted">OPERATIONAL STATUS</div>
                   <div className="mt-1">
-                    <Badge value={assessment.status} />
+                    <Badge value={statusVal} />
                   </div>
                 </div>
 
@@ -301,7 +307,7 @@ const Assessment = () => {
                 <div>
                   <div className="text-xs text-muted">REORDER REQUIRED</div>
                   <div className="mt-1 font-bold text-dark">
-                    {assessment.reorderRequired ? 'YES ⚠️' : 'NO ✅'}
+                    {isReorderRequired ? 'YES ⚠️' : 'NO ✅'}
                   </div>
                 </div>
               </div>
@@ -310,7 +316,7 @@ const Assessment = () => {
               <div className="card alert-card p-3 bg-light border-primary text-center">
                 <div className="text-sm text-muted">Recommended Purchase Order Quantity</div>
                 <div className="text-2xl font-bold text-primary mt-1">
-                  {assessment.recommendedOrderQty} units
+                  {recOrderQty} units
                 </div>
               </div>
 
@@ -336,7 +342,7 @@ const Assessment = () => {
                   <div>Avg Daily Demand: <strong>{assessment.averageDailyDemand?.toFixed(2)} units/day</strong></div>
                   <div>Lead Time Demand: <strong>{assessment.leadTimeDemand?.toFixed(2)} units</strong></div>
                   <div>Reorder Point: <strong>{assessment.reorderPoint} units</strong></div>
-                  <div>Net Inventory Position: <strong>{assessment.netInventoryPosition} units</strong></div>
+                  <div>On Hand Stock: <strong>{assessment.currentInventory ?? 0} units</strong></div>
                 </div>
               </div>
             </div>

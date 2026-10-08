@@ -43,8 +43,9 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const data = await authApi.login(credentials);
-      localStorage.setItem('retailai_token', data.token);
-      setToken(data.token);
+      const jwtToken = data.accessToken || data.token;
+      localStorage.setItem('retailai_token', jwtToken);
+      setToken(jwtToken);
 
       // Fetch user profile from /me endpoint
       const meData = await authApi.getCurrentUser();
@@ -61,8 +62,9 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const data = await authApi.register(registrationData);
-      localStorage.setItem('retailai_token', data.token);
-      setToken(data.token);
+      const jwtToken = data.accessToken || data.token;
+      localStorage.setItem('retailai_token', jwtToken);
+      setToken(jwtToken);
 
       const meData = await authApi.getCurrentUser();
       setUser(meData);

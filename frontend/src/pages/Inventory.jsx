@@ -4,7 +4,6 @@ import { storeApi } from '../api/storeApi';
 import { productApi } from '../api/productApi';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
-import Badge from '../components/common/Badge';
 import Pagination from '../components/common/Pagination';
 
 const Inventory = () => {
@@ -28,8 +27,7 @@ const Inventory = () => {
     storeId: '',
     productId: '',
     quantityOnHand: '',
-    reorderPoint: '',
-    safetyStock: ''
+    quantityOnOrder: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
@@ -90,8 +88,7 @@ const Inventory = () => {
       storeId: stores.length > 0 ? stores[0].id : '',
       productId: products.length > 0 ? products[0].id : '',
       quantityOnHand: '100',
-      reorderPoint: '30',
-      safetyStock: '10'
+      quantityOnOrder: '0'
     });
     setFormError(null);
     setShowModal(true);
@@ -102,9 +99,8 @@ const Inventory = () => {
     setFormData({
       storeId: item.storeId,
       productId: item.productId,
-      quantityOnHand: String(item.quantityOnHand),
-      reorderPoint: String(item.reorderPoint || 0),
-      safetyStock: String(item.safetyStock || 0)
+      quantityOnHand: String(item.quantityOnHand || 0),
+      quantityOnOrder: String(item.quantityOnOrder || 0)
     });
     setFormError(null);
     setShowModal(true);
@@ -118,16 +114,14 @@ const Inventory = () => {
       if (editInventoryId) {
         await inventoryApi.updateInventory(editInventoryId, {
           quantityOnHand: parseInt(formData.quantityOnHand, 10),
-          reorderPoint: parseInt(formData.reorderPoint, 10),
-          safetyStock: parseInt(formData.safetyStock, 10)
+          quantityOnOrder: parseInt(formData.quantityOnOrder, 10)
         });
       } else {
         await inventoryApi.createInventory({
           storeId: parseInt(formData.storeId, 10),
           productId: parseInt(formData.productId, 10),
           quantityOnHand: parseInt(formData.quantityOnHand, 10),
-          reorderPoint: parseInt(formData.reorderPoint, 10),
-          safetyStock: parseInt(formData.safetyStock, 10)
+          quantityOnOrder: parseInt(formData.quantityOnOrder, 10)
         });
       }
       setShowModal(false);
@@ -144,7 +138,7 @@ const Inventory = () => {
       <div className="flex-between flex-align-center">
         <div>
           <h1 className="text-2xl font-bold">Inventory Management</h1>
-          <p className="text-muted text-sm">Monitor stock levels, reorder thresholds & operational status</p>
+          <p className="text-muted text-sm">Monitor stock levels & active replenishment orders</p>
         </div>
         <button className="btn btn-primary" onClick={handleOpenAddModal}>
           + Register Inventory Record
@@ -166,7 +160,7 @@ const Inventory = () => {
               <option value="">All Stores</option>
               {stores.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.code} - {s.name}
+                  {s.storeCode || s.code} - {s.name}
                 </option>
               ))}
             </select>
@@ -214,10 +208,8 @@ const Inventory = () => {
                   <th>Inventory ID</th>
                   <th>Store Code</th>
                   <th>Product SKU</th>
-                  <th>On Hand Quantity</th>
-                  <th>Reorder Point</th>
-                  <th>Safety Stock</th>
-                  <th>Status</th>
+                  <th>Quantity On Hand</th>
+                  <th>Quantity On Order</th>
                   <th className="text-right">Actions</th>
                 </tr>
               </thead>
@@ -226,14 +218,12 @@ const Inventory = () => {
                   <tr key={item.id}>
                     <td>#{item.id}</td>
                     <td><strong>{item.storeCode || `Store #${item.storeId}`}</strong></td>
-                    <td>{item.productSku || `Product #${item.productId}`}</td>
+                    <td>{item.sku || `Product #${item.productId}`}</td>
                     <td>
                       <span className="font-semibold">{item.quantityOnHand} units</span>
                     </td>
-                    <td>{item.reorderPoint}</td>
-                    <td>{item.safetyStock}</td>
                     <td>
-                      <Badge value={item.status} />
+                      <span>{item.quantityOnOrder || 0} units</span>
                     </td>
                     <td className="text-right">
                       <button
@@ -290,7 +280,7 @@ const Inventory = () => {
                       <option value="" disabled>Select Store</option>
                       {stores.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.code} - {s.name}
+                          {s.storeCode || s.code} - {s.name}
                         </option>
                       ))}
                     </select>
@@ -329,27 +319,14 @@ const Inventory = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Reorder Point</label>
+                <label className="form-label">Quantity On Order</label>
                 <input
                   type="number"
                   min="0"
                   className="form-control"
-                  placeholder="30"
-                  value={formData.reorderPoint}
-                  onChange={(e) => setFormData({ ...formData, reorderPoint: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Safety Stock Level</label>
-                <input
-                  type="number"
-                  min="0"
-                  className="form-control"
-                  placeholder="10"
-                  value={formData.safetyStock}
-                  onChange={(e) => setFormData({ ...formData, safetyStock: e.target.value })}
+                  placeholder="0"
+                  value={formData.quantityOnOrder}
+                  onChange={(e) => setFormData({ ...formData, quantityOnOrder: e.target.value })}
                   required
                 />
               </div>

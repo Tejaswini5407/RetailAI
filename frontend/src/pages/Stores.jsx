@@ -15,7 +15,7 @@ const Stores = () => {
   // Form State
   const [showModal, setShowModal] = useState(false);
   const [editStoreId, setEditStoreId] = useState(null);
-  const [formData, setFormData] = useState({ code: '', name: '', location: '' });
+  const [formData, setFormData] = useState({ storeCode: '', name: '', city: '', state: '' });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
 
@@ -41,14 +41,19 @@ const Stores = () => {
 
   const handleOpenAddModal = () => {
     setEditStoreId(null);
-    setFormData({ code: '', name: '', location: '' });
+    setFormData({ storeCode: '', name: '', city: '', state: '' });
     setFormError(null);
     setShowModal(true);
   };
 
   const handleOpenEditModal = (store) => {
     setEditStoreId(store.id);
-    setFormData({ code: store.code, name: store.name, location: store.location || '' });
+    setFormData({
+      storeCode: store.storeCode || store.code || '',
+      name: store.name || '',
+      city: store.city || '',
+      state: store.state || ''
+    });
     setFormError(null);
     setShowModal(true);
   };
@@ -111,17 +116,19 @@ const Stores = () => {
                   <th>ID</th>
                   <th>Store Code</th>
                   <th>Store Name</th>
-                  <th>Location</th>
+                  <th>City</th>
+                  <th>State</th>
                   <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {stores.map((store) => (
                   <tr key={store.id}>
-                    <td>{store.id}</td>
-                    <td><strong>{store.code}</strong></td>
+                    <td>#{store.id}</td>
+                    <td><strong>{store.storeCode || store.code}</strong></td>
                     <td>{store.name}</td>
-                    <td>{store.location || 'N/A'}</td>
+                    <td>{store.city || 'N/A'}</td>
+                    <td><span className="badge badge-secondary">{store.state || 'N/A'}</span></td>
                     <td className="text-right">
                       <button
                         className="btn btn-outline btn-sm me-2"
@@ -177,8 +184,8 @@ const Stores = () => {
                   type="text"
                   className="form-control"
                   placeholder="e.g. STORE-001"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  value={formData.storeCode}
+                  onChange={(e) => setFormData({ ...formData, storeCode: e.target.value })}
                   required
                 />
               </div>
@@ -195,15 +202,30 @@ const Stores = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Location / Address</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="New York, NY"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                />
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">City</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="New York"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">State</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="NY"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="flex-between mt-4">

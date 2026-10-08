@@ -17,6 +17,7 @@ const Users = () => {
   const [showModal, setShowModal] = useState(false);
   const [editUserId, setEditUserId] = useState(null);
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
     role: 'STORE_MANAGER'
@@ -46,14 +47,14 @@ const Users = () => {
 
   const handleOpenAddModal = () => {
     setEditUserId(null);
-    setFormData({ email: '', password: '', role: 'STORE_MANAGER' });
+    setFormData({ name: '', email: '', password: '', role: 'STORE_MANAGER' });
     setFormError(null);
     setShowModal(true);
   };
 
   const handleOpenEditModal = (user) => {
     setEditUserId(user.id);
-    setFormData({ email: user.email, password: '', role: user.role });
+    setFormData({ name: user.name || '', email: user.email, password: '', role: user.role });
     setFormError(null);
     setShowModal(true);
   };
@@ -116,6 +117,7 @@ const Users = () => {
               <thead>
                 <tr>
                   <th>User ID</th>
+                  <th>Full Name</th>
                   <th>Email Address</th>
                   <th>Assigned Role</th>
                   <th className="text-right">Actions</th>
@@ -125,7 +127,8 @@ const Users = () => {
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td>#{u.id}</td>
-                    <td><strong>{u.email}</strong></td>
+                    <td><strong>{u.name || u.email.split('@')[0]}</strong></td>
+                    <td>{u.email}</td>
                     <td>
                       <Badge value={u.role} />
                     </td>
@@ -180,6 +183,18 @@ const Users = () => {
             <form onSubmit={handleSubmit}>
               {!editUserId && (
                 <>
+                  <div className="form-group">
+                    <label className="form-label">Full Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="John Doe"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+
                   <div className="form-group">
                     <label className="form-label">Email Address</label>
                     <input

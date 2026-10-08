@@ -15,7 +15,7 @@ const Products = () => {
   // Form State
   const [showModal, setShowModal] = useState(false);
   const [editProductId, setEditProductId] = useState(null);
-  const [formData, setFormData] = useState({ sku: '', name: '', category: '', price: '' });
+  const [formData, setFormData] = useState({ sku: '', name: '', category: '', department: '' });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
 
@@ -41,7 +41,7 @@ const Products = () => {
 
   const handleOpenAddModal = () => {
     setEditProductId(null);
-    setFormData({ sku: '', name: '', category: '', price: '' });
+    setFormData({ sku: '', name: '', category: '', department: '' });
     setFormError(null);
     setShowModal(true);
   };
@@ -49,10 +49,10 @@ const Products = () => {
   const handleOpenEditModal = (product) => {
     setEditProductId(product.id);
     setFormData({
-      sku: product.sku,
-      name: product.name,
+      sku: product.sku || '',
+      name: product.name || '',
       category: product.category || '',
-      price: product.price ? String(product.price) : ''
+      department: product.department || ''
     });
     setFormError(null);
     setShowModal(true);
@@ -63,14 +63,10 @@ const Products = () => {
     setSubmitting(true);
     setFormError(null);
     try {
-      const payload = {
-        ...formData,
-        price: parseFloat(formData.price)
-      };
       if (editProductId) {
-        await productApi.updateProduct(editProductId, payload);
+        await productApi.updateProduct(editProductId, formData);
       } else {
-        await productApi.createProduct(payload);
+        await productApi.createProduct(formData);
       }
       setShowModal(false);
       fetchProducts(page);
@@ -96,7 +92,7 @@ const Products = () => {
       <div className="flex-between flex-align-center">
         <div>
           <h1 className="text-2xl font-bold">Product Catalog</h1>
-          <p className="text-muted text-sm">Manage product SKUs, categories, and unit pricing</p>
+          <p className="text-muted text-sm">Manage product SKUs, categories, and department assignments</p>
         </div>
         <button className="btn btn-primary" onClick={handleOpenAddModal}>
           + Add New Product
@@ -121,18 +117,18 @@ const Products = () => {
                   <th>SKU</th>
                   <th>Product Name</th>
                   <th>Category</th>
-                  <th>Unit Price</th>
+                  <th>Department</th>
                   <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((product) => (
                   <tr key={product.id}>
-                    <td>{product.id}</td>
+                    <td>#{product.id}</td>
                     <td><strong>{product.sku}</strong></td>
                     <td>{product.name}</td>
                     <td><span className="badge badge-secondary">{product.category || 'General'}</span></td>
-                    <td>${product.price?.toFixed(2) || '0.00'}</td>
+                    <td><span className="badge badge-info">{product.department || 'Retail'}</span></td>
                     <td className="text-right">
                       <button
                         className="btn btn-outline btn-sm me-2"
@@ -206,29 +202,30 @@ const Products = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Category</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Dairy"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                />
-              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Category</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Dairy"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    required
+                  />
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Unit Price ($)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="form-control"
-                  placeholder="3.99"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  required
-                />
+                <div className="form-group">
+                  <label className="form-label">Department</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Grocery"
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="flex-between mt-4">
