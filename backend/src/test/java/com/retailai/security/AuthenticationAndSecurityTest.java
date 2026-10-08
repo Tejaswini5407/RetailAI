@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -261,5 +262,17 @@ public class AuthenticationAndSecurityTest {
         mockMvc.perform(get("/api/v1/security/me")
                 .header("Authorization", "Bearer invalid.jwt.token"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("CORS OPTIONS preflight request to /api/v1/auth/register succeeds with 200 OK")
+    void testCorsPreflightRequestSuccess() throws Exception {
+        mockMvc.perform(options("/api/v1/auth/register")
+                .header("Origin", "http://localhost:3000")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "Content-Type,Authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+                .andExpect(header().string("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS"));
     }
 }
