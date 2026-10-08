@@ -8,6 +8,7 @@ const Sidebar = () => {
 
   const navItems = [
     { label: 'Dashboard', path: '/', icon: '📊' },
+    { label: 'Data Import', path: '/import', icon: '📥' },
     { label: 'Stores', path: '/stores', icon: '🏪' },
     { label: 'Products', path: '/products', icon: '📦' },
     { label: 'Sales Records', path: '/sales', icon: '📈' },

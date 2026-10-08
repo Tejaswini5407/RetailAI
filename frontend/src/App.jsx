@@ -7,6 +7,7 @@ import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import DataImport from './pages/DataImport';
 import Stores from './pages/Stores';
 import Products from './pages/Products';
 import Sales from './pages/Sales';
@@ -29,6 +30,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/import" element={<DataImport />} />
               <Route path="/stores" element={<Stores />} />
               <Route path="/products" element={<Products />} />
               <Route path="/sales" element={<Sales />} />

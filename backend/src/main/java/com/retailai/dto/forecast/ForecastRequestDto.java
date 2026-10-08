@@ -15,6 +15,8 @@ public class ForecastRequestDto {
     @NotNull(message = "Date is required")
     private LocalDate date;
 
+    private Integer horizonDays = 1;
+
     private Map<String, Double> features;
 
     public ForecastRequestDto() {}
@@ -23,6 +25,15 @@ public class ForecastRequestDto {
         this.storeId = storeId;
         this.productId = productId;
         this.date = date;
+        this.features = features;
+        this.horizonDays = 1;
+    }
+
+    public ForecastRequestDto(Long storeId, Long productId, LocalDate date, Integer horizonDays, Map<String, Double> features) {
+        this.storeId = storeId;
+        this.productId = productId;
+        this.date = date;
+        this.horizonDays = horizonDays != null ? horizonDays : 1;
         this.features = features;
     }
 
@@ -34,6 +45,9 @@ public class ForecastRequestDto {
 
     public LocalDate getDate() { return date; }
     public void setDate(LocalDate date) { this.date = date; }
+
+    public Integer getHorizonDays() { return horizonDays; }
+    public void setHorizonDays(Integer horizonDays) { this.horizonDays = horizonDays; }
 
     public Map<String, Double> getFeatures() { return features; }
     public void setFeatures(Map<String, Double> features) { this.features = features; }
