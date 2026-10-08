@@ -25,7 +25,8 @@ const Sales = () => {
   const [formData, setFormData] = useState({
     storeId: '',
     productId: '',
-    quantitySold: '',
+    unitsSold: '',
+    unitPrice: '',
     saleDate: new Date().toISOString().split('T')[0]
   });
   const [submitting, setSubmitting] = useState(false);
@@ -85,7 +86,8 @@ const Sales = () => {
     setFormData({
       storeId: stores.length > 0 ? stores[0].id : '',
       productId: products.length > 0 ? products[0].id : '',
-      quantitySold: '',
+      unitsSold: '',
+      unitPrice: '',
       saleDate: new Date().toISOString().split('T')[0]
     });
     setFormError(null);
@@ -100,7 +102,8 @@ const Sales = () => {
       const payload = {
         storeId: parseInt(formData.storeId, 10),
         productId: parseInt(formData.productId, 10),
-        quantitySold: parseInt(formData.quantitySold, 10),
+        unitsSold: parseInt(formData.unitsSold, 10),
+        unitPrice: formData.unitPrice ? parseFloat(formData.unitPrice) : null,
         saleDate: formData.saleDate
       };
       await salesApi.recordSale(payload);
@@ -140,7 +143,7 @@ const Sales = () => {
               <option value="">All Stores</option>
               {stores.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.code} - {s.name}
+                  {s.storeCode || s.code} - {s.name}
                 </option>
               ))}
             </select>
@@ -188,7 +191,8 @@ const Sales = () => {
                   <th>Transaction ID</th>
                   <th>Store Code</th>
                   <th>Product SKU</th>
-                  <th>Quantity Sold</th>
+                  <th>Units Sold</th>
+                  <th>Unit Price</th>
                   <th>Sale Date</th>
                 </tr>
               </thead>
@@ -197,8 +201,9 @@ const Sales = () => {
                   <tr key={sale.id}>
                     <td>#{sale.id}</td>
                     <td><strong>{sale.storeCode || `Store #${sale.storeId}`}</strong></td>
-                    <td>{sale.productSku || `Product #${sale.productId}`}</td>
-                    <td><span className="font-semibold text-primary">{sale.quantitySold} units</span></td>
+                    <td>{sale.sku || `Product #${sale.productId}`}</td>
+                    <td><span className="font-semibold text-primary">{sale.unitsSold ?? sale.quantitySold} units</span></td>
+                    <td>{sale.unitPrice ? `$${parseFloat(sale.unitPrice).toFixed(2)}` : 'N/A'}</td>
                     <td>{sale.saleDate}</td>
                   </tr>
                 ))}
@@ -243,7 +248,7 @@ const Sales = () => {
                   <option value="" disabled>Select Store</option>
                   {stores.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.code} - {s.name}
+                      {s.storeCode || s.code} - {s.name}
                     </option>
                   ))}
                 </select>
@@ -266,17 +271,32 @@ const Sales = () => {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Quantity Sold</label>
-                <input
-                  type="number"
-                  min="1"
-                  className="form-control"
-                  placeholder="e.g. 15"
-                  value={formData.quantitySold}
-                  onChange={(e) => setFormData({ ...formData, quantitySold: e.target.value })}
-                  required
-                />
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Units Sold</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="form-control"
+                    placeholder="e.g. 15"
+                    value={formData.unitsSold}
+                    onChange={(e) => setFormData({ ...formData, unitsSold: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Unit Price ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-control"
+                    placeholder="e.g. 4.50"
+                    value={formData.unitPrice}
+                    onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="form-group">
