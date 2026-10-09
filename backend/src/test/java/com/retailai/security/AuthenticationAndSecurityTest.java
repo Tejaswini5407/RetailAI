@@ -162,7 +162,7 @@ public class AuthenticationAndSecurityTest {
         assertEquals(UserRole.STORE_MANAGER, staffB.getRole());
 
         // Authenticate staff B via login
-        LoginRequest loginReq = new LoginRequest("staffB@sec.com", "pass12345");
+        LoginRequest loginReq = new LoginRequest("ORG-SEC-B", "staffB@sec.com", "pass12345");
         AuthResponse staffAuth = authService.login(loginReq);
 
         // Staff B (STORE_MANAGER) cannot access ADMIN-only endpoint
@@ -200,6 +200,30 @@ public class AuthenticationAndSecurityTest {
     }
 
     @Test
+    @DisplayName("Case-insensitive duplicate org code registration is rejected with 409 Conflict")
+    void testCaseInsensitiveOrgCodeDuplicateRegistrationRejected() throws Exception {
+        RegisterRequest initialReq = new RegisterRequest("ORG-CASE-CHECK", "Case Org", "Owner", "owner@casecheck.com", "Password123!", UserRole.ADMIN);
+        authService.register(initialReq);
+
+        String lowerCaseOrgJson = """
+            {
+                "organizationCode": "org-case-check",
+                "organizationName": "Impostor Org",
+                "name": "Attacker",
+                "email": "attacker@casecheck.com",
+                "password": "Password123!",
+                "role": "ADMIN"
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(lowerCaseOrgJson))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Conflict"));
+    }
+
+    @Test
     @DisplayName("Password is stored hashed in database using BCrypt")
     void testPasswordStoredHashed() {
         RegisterRequest req = new RegisterRequest("ORG-PWD", "Pwd Org", "User Pwd", "hashcheck@test.com", "mysecretpassword", UserRole.ADMIN);
@@ -219,6 +243,7 @@ public class AuthenticationAndSecurityTest {
 
         String loginJson = """
             {
+                "organizationCode": "ORG-LOGIN",
                 "email": "login@test.com",
                 "password": "correctpass123"
             }
@@ -234,6 +259,49 @@ public class AuthenticationAndSecurityTest {
     }
 
     @Test
+    @DisplayName("Login with mixed-case organization code and email succeeds")
+    void testCaseInsensitiveLoginSuccess() throws Exception {
+        RegisterRequest req = new RegisterRequest("ORG-MIXED", "Mixed Org", "User Mixed", "mixed@test.com", "pass12345", UserRole.ADMIN);
+        authService.register(req);
+
+        String loginJson = """
+            {
+                "organizationCode": "org-mixed",
+                "email": "MIXED@TEST.COM",
+                "password": "pass12345"
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.user.email").value("mixed@test.com"));
+    }
+
+    @Test
+    @DisplayName("Login with mismatched organization code fails with 401 Unauthorized")
+    void testLoginMismatchedOrgCodeFails() throws Exception {
+        RegisterRequest req = new RegisterRequest("ORG-VALID", "Valid Org", "User Valid", "user@valid.com", "pass12345", UserRole.ADMIN);
+        authService.register(req);
+
+        String loginJson = """
+            {
+                "organizationCode": "ORG-OTHER",
+                "email": "user@valid.com",
+                "password": "pass12345"
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"));
+    }
+
+    @Test
     @DisplayName("Login with wrong password fails with 401 Unauthorized")
     void testLoginWrongPasswordFails() throws Exception {
         RegisterRequest req = new RegisterRequest("ORG-WRONG", "Wrong Org", "User Wrong", "wrongpass@test.com", "rightpass", UserRole.ADMIN);
@@ -241,6 +309,7 @@ public class AuthenticationAndSecurityTest {
 
         String loginJson = """
             {
+                "organizationCode": "ORG-WRONG",
                 "email": "wrongpass@test.com",
                 "password": "badpassword"
             }

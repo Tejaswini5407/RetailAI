@@ -41,12 +41,13 @@ public class UserService {
         Organization organization = organizationRepository.findById(tenantId)
                 .orElseThrow(() -> new OrganizationNotFoundException("Organization not found for ID: " + tenantId));
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException("Email '" + request.getEmail() + "' is already registered");
+        String reqEmail = request.getEmail() != null ? request.getEmail().trim() : "";
+        if (userRepository.existsByEmailIgnoreCase(reqEmail)) {
+            throw new EmailAlreadyExistsException("Email '" + reqEmail + "' is already registered");
         }
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
-        User user = new User(organization, request.getEmail(), request.getName(), hashedPassword, request.getRole());
+        User user = new User(organization, reqEmail, request.getName(), hashedPassword, request.getRole());
         User savedUser = userRepository.save(user);
 
         return mapToDto(savedUser);

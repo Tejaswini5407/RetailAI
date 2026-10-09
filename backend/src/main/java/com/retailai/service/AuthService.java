@@ -41,28 +41,31 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException("Email '" + request.getEmail() + "' is already registered");
+        String reqEmail = request.getEmail() != null ? request.getEmail().trim() : "";
+        String reqOrgCode = request.getOrganizationCode() != null ? request.getOrganizationCode().trim() : "";
+
+        if (userRepository.existsByEmailIgnoreCase(reqEmail)) {
+            throw new EmailAlreadyExistsException("Email '" + reqEmail + "' is already registered");
         }
 
-        if (organizationRepository.existsByCode(request.getOrganizationCode())) {
+        if (organizationRepository.existsByCodeIgnoreCase(reqOrgCode)) {
             throw new OrganizationAlreadyExistsException(
-                "Organization with code '" + request.getOrganizationCode() + "' already exists. Public registration cannot join an existing organization."
+                "Organization with code '" + reqOrgCode + "' already exists. Public registration cannot join an existing organization."
             );
         }
 
         String orgName = (request.getOrganizationName() != null && !request.getOrganizationName().isBlank())
-                ? request.getOrganizationName()
-                : request.getOrganizationCode() + " Organization";
+                ? request.getOrganizationName().trim()
+                : reqOrgCode + " Organization";
 
-        Organization organization = organizationRepository.save(new Organization(request.getOrganizationCode(), orgName));
+        Organization organization = organizationRepository.save(new Organization(reqOrgCode, orgName));
 
         // Public registration always assigns ADMIN role to the founder of a new organization.
         // Client request role is ignored to prevent privilege escalation.
         UserRole assignedRole = UserRole.ADMIN;
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
-        User user = new User(organization, request.getEmail(), request.getName(), hashedPassword, assignedRole);
+        User user = new User(organization, reqEmail, request.getName(), hashedPassword, assignedRole);
         User savedUser = userRepository.save(user);
 
         CustomUserDetails userDetails = new CustomUserDetails(savedUser);
@@ -85,14 +88,15 @@ public class AuthService {
         Organization organization = organizationRepository.findById(tenantId)
                 .orElseThrow(() -> new OrganizationNotFoundException("Organization not found for ID: " + tenantId));
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException("Email '" + request.getEmail() + "' is already registered");
+        String reqEmail = request.getEmail() != null ? request.getEmail().trim() : "";
+        if (userRepository.existsByEmailIgnoreCase(reqEmail)) {
+            throw new EmailAlreadyExistsException("Email '" + reqEmail + "' is already registered");
         }
 
         UserRole roleToAssign = (request.getRole() != null) ? request.getRole() : UserRole.STORE_MANAGER;
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
-        User user = new User(organization, request.getEmail(), request.getName(), hashedPassword, roleToAssign);
+        User user = new User(organization, reqEmail, request.getName(), hashedPassword, roleToAssign);
         User savedUser = userRepository.save(user);
 
         return new UserSummaryDto(
@@ -107,8 +111,15 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        String reqEmail = request.getEmail() != null ? request.getEmail().trim() : "";
+        String reqOrgCode = request.getOrganizationCode() != null ? request.getOrganizationCode().trim() : "";
+
+        User user = userRepository.findByEmailIgnoreCase(reqEmail)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+
+        if (user.getOrganization() == null || reqOrgCode.isBlank() || !user.getOrganization().getCode().equalsIgnoreCase(reqOrgCode)) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialsException("Invalid email or password");

@@ -9,5 +9,7 @@ import java.util.Optional;
 @Repository
 public interface OrganizationRepository extends JpaRepository<Organization, Long> {
     Optional<Organization> findByCode(String code);
+    Optional<Organization> findByCodeIgnoreCase(String code);
     boolean existsByCode(String code);
+    boolean existsByCodeIgnoreCase(String code);
 }
