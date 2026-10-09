@@ -20,6 +20,13 @@ export const importApi = {
     return response.data;
   },
 
+  downloadTemplate: async (type) => {
+    const response = await apiClient.get(`/api/v1/imports/templates/${type}`, {
+      responseType: 'blob',
+    });
+    return response;
+  },
+
   downloadTemplateUrl: (type) => {
     const baseURL = apiClient.defaults.baseURL || 'http://localhost:8080';
     return `${baseURL}/api/v1/imports/templates/${type}`;

@@ -49,12 +49,33 @@ public class ImportController {
     }
 
     @GetMapping("/templates/{type}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STORE_MANAGER', 'INVENTORY_MANAGER')")
     public ResponseEntity<String> downloadTemplate(@PathVariable("type") String type) {
         String csvContent = importService.getTemplateCsv(type);
-        String fileName = type.toLowerCase() + "_template.csv";
+        String fileName;
+        String t = type != null ? type.toUpperCase() : "PRODUCTS";
+        switch (t) {
+            case "PRODUCTS":
+                fileName = "products_template.csv";
+                break;
+            case "STORES":
+                fileName = "stores_template.csv";
+                break;
+            case "SALES":
+            case "HISTORICAL_SALES":
+                fileName = "historical_sales_template.csv";
+                break;
+            case "INVENTORY":
+                fileName = "inventory_template.csv";
+                break;
+            default:
+                fileName = type.toLowerCase() + "_template.csv";
+                break;
+        }
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION)
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .body(csvContent);
     }

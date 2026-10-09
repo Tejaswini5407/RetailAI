@@ -462,6 +462,7 @@ public class ImportService {
             case "STORES":
                 return "store_code,name,state,city\nSTORE-CA-1,Los Angeles Main Store,CA,Los Angeles\n";
             case "SALES":
+            case "HISTORICAL_SALES":
                 return "date,store_code,sku,units_sold,unit_price\n2026-10-01,STORE-CA-1,FOODS_1_001,45,3.99\n";
             case "INVENTORY":
                 return "store_code,sku,quantity_on_hand,quantity_on_order\nSTORE-CA-1,FOODS_1_001,120,50\n";

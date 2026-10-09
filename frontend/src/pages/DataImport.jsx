@@ -92,6 +92,35 @@ const DataImport = () => {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await importApi.downloadTemplate(activeTab);
+
+      let fileName = `${activeTab.toLowerCase()}_template.csv`;
+      if (activeTab === 'SALES') fileName = 'historical_sales_template.csv';
+
+      const contentDisposition = response.headers['content-disposition'];
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Failed to download template. Please verify login.');
+    }
+  };
+
   const getStatusBadgeType = (status) => {
     switch (status) {
       case 'COMPLETED': return 'success';
@@ -154,13 +183,14 @@ const DataImport = () => {
               <h3 className="font-semibold text-dark">
                 Upload {activeTab.replace('_', ' ')} CSV
               </h3>
-              <a
-                href={importApi.downloadTemplateUrl(activeTab)}
-                download
-                className="text-xs text-primary font-medium underline"
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="btn btn-sm btn-link text-xs text-primary font-medium underline"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
                 📥 Download CSV Template
-              </a>
+              </button>
             </div>
 
             <form onSubmit={handlePreview} className="flex-column gap-3 mt-3">
