@@ -61,7 +61,8 @@ public class MLInferenceClient {
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 Map<String, Object> body = response.getBody();
                 String modelName = (String) body.getOrDefault("model_name", "Random Forest");
-                String modelVersion = (String) body.get("model_version");
+                String rawVersion = (String) body.get("model_version");
+                String modelVersion = (rawVersion != null && !rawVersion.isBlank()) ? rawVersion : "unversioned-artifact";
 
                 List<Map<String, Object>> predictions = (List<Map<String, Object>>) body.get("predictions");
                 if (predictions != null && !predictions.isEmpty()) {

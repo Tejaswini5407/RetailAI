@@ -291,46 +291,43 @@ const Forecasts = () => {
       {/* Forecast Factors Tab */}
       {activeTab === 'FACTORS' && (
         <div className="card flex-column gap-3">
-          <h3 className="font-semibold text-dark">Forecast Factors & Model Signals</h3>
-          <p className="text-sm text-muted">
-            Key input signals driving predictions in the active feature pipeline:
-          </p>
+          <div className="flex justify-between items-center border-b pb-2">
+            <div>
+              <h3 className="font-semibold text-dark">Active Model Pipeline Input Signals</h3>
+              <p className="text-sm text-muted">
+                General feature pipeline signals used by the Random Forest demand prediction model:
+              </p>
+            </div>
+            {explanation?.inventoryFactors?.modelVersion && (
+              <span className="badge badge-info text-xs">
+                Model: {explanation.inventoryFactors.modelName || 'Random Forest'} ({explanation.inventoryFactors.modelVersion})
+              </span>
+            )}
+          </div>
 
           <div className="table-responsive">
             <table className="table text-sm">
               <thead>
                 <tr>
                   <th>Signal Factor</th>
-                  <th>Impact Level</th>
-                  <th>Description</th>
+                  <th>Feature Group Weight</th>
+                  <th>Pipeline Description</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td className="font-semibold">Recent Demand Trend</td>
-                  <td><Badge type="danger">High</Badge></td>
-                  <td>Weighted moving average of recent 7-day sales volume.</td>
-                </tr>
-                <tr>
-                  <td className="font-semibold">Day-of-Week Seasonality</td>
-                  <td><Badge type="warning">Medium</Badge></td>
-                  <td>Historical demand patterns for target day of week.</td>
-                </tr>
-                <tr>
-                  <td className="font-semibold">Lagged Sales Features</td>
-                  <td><Badge type="danger">High</Badge></td>
-                  <td>7-day, 14-day, and 28-day historical lag values.</td>
-                </tr>
-                <tr>
-                  <td className="font-semibold">Rolling Demand Windows</td>
-                  <td><Badge type="warning">Medium</Badge></td>
-                  <td>Rolling 7-day and 28-day mean sales per store/product.</td>
-                </tr>
-                <tr>
-                  <td className="font-semibold">Price Information</td>
-                  <td><Badge type="info">Low</Badge></td>
-                  <td>Unit price elasticity and historical price ratio where available.</td>
-                </tr>
+                {(explanation?.factors && explanation.factors.length > 0 ? explanation.factors : [
+                  { factor: "Recent Demand Trend", impact: "High", description: "Weighted moving average of recent 7-day sales volume." },
+                  { factor: "Day-of-Week Seasonality", impact: "Medium", description: "Historical demand patterns for target day of week." },
+                  { factor: "Lagged Sales Features", impact: "High", description: "7-day, 14-day, and 28-day historical lag values." },
+                  { factor: "Rolling Demand Windows", impact: "Medium", description: "Rolling 7-day and 28-day mean sales per store/product." },
+                  { factor: "Price Information", impact: "Low", description: "Unit price elasticity and historical price ratio where available." }
+                ]).map((f, i) => (
+                  <tr key={i}>
+                    <td className="font-semibold">{f.factor}</td>
+                    <td><Badge type="info" value={f.impact}>{f.impact}</Badge></td>
+                    <td>{f.description}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

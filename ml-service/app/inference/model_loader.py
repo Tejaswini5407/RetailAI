@@ -86,7 +86,7 @@ def load_trained_model(model_path: Optional[str] = None, force_reload: bool = Fa
         if isinstance(artifact, dict):
             model_obj = artifact.get("model_object")
             model_name = artifact.get("model_name", "Random Forest")
-            model_version = artifact.get("model_version")  # None if not persisted in artifact
+            model_version = artifact.get("model_version")
             feature_names = artifact.get("feature_names", [])
             metrics = artifact.get("metrics", {})
             split_info = artifact.get("split_info", {})

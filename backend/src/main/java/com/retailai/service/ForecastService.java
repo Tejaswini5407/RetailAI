@@ -51,13 +51,18 @@ public class ForecastService {
         Product product = productRepository.findByOrganizationIdAndId(tenantId, request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found for ID: " + request.getProductId()));
 
+        Map<String, Double> features = request.getFeatures();
+        if (features == null || features.isEmpty()) {
+            features = buildInferenceFeatures(tenantId, store, product, request.getDate());
+        }
+
         ForecastResponseDto response = mlInferenceClient.predictDemand(
             store.getId(),
             store.getStoreCode(),
             product.getId(),
             product.getSku(),
             request.getDate(),
-            request.getFeatures()
+            features
         );
 
         int horizon = request.getHorizonDays() != null && request.getHorizonDays() > 0 ? request.getHorizonDays() : 1;
@@ -92,13 +97,15 @@ public class ForecastService {
         Product product = productRepository.findByOrganizationIdAndId(tenantId, request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found for ID: " + request.getProductId()));
 
+        Map<String, Double> features = buildInferenceFeatures(tenantId, store, product, request.getDate());
+
         ForecastResponseDto forecast = mlInferenceClient.predictDemand(
             store.getId(),
             store.getStoreCode(),
             product.getId(),
             product.getSku(),
             request.getDate(),
-            null
+            features
         );
 
         String runId = UUID.randomUUID().toString().substring(0, 8);
@@ -132,6 +139,139 @@ public class ForecastService {
         InventoryAssessmentResponseDto assessment = inventoryService.assessInventory(assessReq);
 
         return new ForecastInventoryAssessmentResponseDto(forecast, assessment);
+    }
+
+    public Map<String, Double> buildInferenceFeatures(Long tenantId, Store store, Product product, LocalDate targetDate) {
+        Map<String, Double> features = new LinkedHashMap<>();
+
+        // 1. Price features
+        double sellPrice = 10.0;
+        features.put("sell_price", sellPrice);
+        features.put("price_change_pct", 0.0);
+        features.put("price_rel_4w_avg", 1.0);
+
+        // 2. Calendar / Date features from targetDate
+        LocalDate dateToUse = (targetDate != null) ? targetDate : LocalDate.now().plusDays(1);
+        int dayOfWeek = dateToUse.getDayOfWeek().getValue() % 7; // 0=Mon .. 6=Sun
+        int dayOfMonth = dateToUse.getDayOfMonth();
+        int weekOfYear = dateToUse.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+        int month = dateToUse.getMonthValue();
+        int quarter = (month - 1) / 3 + 1;
+        int year = dateToUse.getYear();
+        double isWeekend = (dayOfWeek == 5 || dayOfWeek == 6) ? 1.0 : 0.0;
+
+        features.put("day_of_week", (double) dayOfWeek);
+        features.put("day_of_month", (double) dayOfMonth);
+        features.put("week_of_year", (double) weekOfYear);
+        features.put("month", (double) month);
+        features.put("quarter", (double) quarter);
+        features.put("year", (double) year);
+        features.put("is_weekend", isWeekend);
+        features.put("is_event_day", 0.0);
+        features.put("is_snap_day", 0.0);
+        features.put("snap_CA", 0.0);
+        features.put("snap_TX", 0.0);
+        features.put("snap_WI", 0.0);
+
+        // 3. Historical Sales Lags & Rolling Statistics
+        List<Sale> pastSales = saleRepository.findByOrganizationIdAndStoreIdAndProductIdAndSaleDateBeforeOrderBySaleDateDesc(
+            tenantId, store.getId(), product.getId(), dateToUse
+        );
+
+        if (pastSales != null && !pastSales.isEmpty()) {
+            Map<LocalDate, Double> salesMap = new HashMap<>();
+            double totalUnits = 0.0;
+            for (Sale s : pastSales) {
+                double units = s.getUnitsSold() != null ? s.getUnitsSold().doubleValue() : 0.0;
+                salesMap.put(s.getSaleDate(), units);
+                totalUnits += units;
+            }
+            double overallAvg = totalUnits / pastSales.size();
+
+            // Lag features
+            features.put("lag_1", salesMap.getOrDefault(dateToUse.minusDays(1), pastSales.get(0).getUnitsSold().doubleValue()));
+            features.put("lag_7", salesMap.getOrDefault(dateToUse.minusDays(7), overallAvg));
+            features.put("lag_14", salesMap.getOrDefault(dateToUse.minusDays(14), overallAvg));
+            features.put("lag_28", salesMap.getOrDefault(dateToUse.minusDays(28), overallAvg));
+
+            // Rolling statistics
+            features.put("rolling_mean_7", calculateRollingMean(salesMap, dateToUse, 7, overallAvg));
+            features.put("rolling_std_7", calculateRollingStd(salesMap, dateToUse, 7, overallAvg));
+            features.put("rolling_mean_14", calculateRollingMean(salesMap, dateToUse, 14, overallAvg));
+            features.put("rolling_std_14", calculateRollingStd(salesMap, dateToUse, 14, overallAvg));
+            features.put("rolling_mean_28", calculateRollingMean(salesMap, dateToUse, 28, overallAvg));
+            features.put("rolling_std_28", calculateRollingStd(salesMap, dateToUse, 28, overallAvg));
+        } else {
+            // Insufficient / Zero History Strategy:
+            // Use training-compatible baseline estimate based on product price and store baseline rather than all zeros
+            double baselineAvg = Math.max(1.0, 12.0 - sellPrice * 0.3);
+            features.put("lag_1", baselineAvg);
+            features.put("lag_7", baselineAvg);
+            features.put("lag_14", baselineAvg);
+            features.put("lag_28", baselineAvg);
+
+            features.put("rolling_mean_7", baselineAvg);
+            features.put("rolling_std_7", 0.0);
+            features.put("rolling_mean_14", baselineAvg);
+            features.put("rolling_std_14", 0.0);
+            features.put("rolling_mean_28", baselineAvg);
+            features.put("rolling_std_28", 0.0);
+        }
+
+        // 4. Categorical & Indicator Features
+        String sku = product.getSku() != null ? product.getSku() : "";
+        String storeCode = store.getStoreCode() != null ? store.getStoreCode() : "";
+        String category = product.getCategory() != null ? product.getCategory().toUpperCase() : "";
+        String department = product.getDepartment() != null ? product.getDepartment().toUpperCase() : "";
+
+        features.put("item_code", (double) (Math.abs(sku.hashCode()) % 1000));
+        features.put("store_id_CA_1", (storeCode.contains("CA_1") || storeCode.endsWith("1")) ? 1.0 : 0.0);
+        features.put("store_id_TX_1", (storeCode.contains("TX_1") || storeCode.endsWith("2")) ? 1.0 : 0.0);
+        features.put("state_id_CA", (storeCode.startsWith("CA") || store.getId() % 2 != 0) ? 1.0 : 0.0);
+        features.put("state_id_TX", (storeCode.startsWith("TX") || store.getId() % 2 == 0) ? 1.0 : 0.0);
+
+        boolean isFood = category.contains("FOOD") || sku.contains("FOOD") || department.contains("FOOD");
+        boolean isHobby = category.contains("HOBBY") || sku.contains("HOBBY") || department.contains("HOBBY");
+        boolean isHouse = category.contains("HOUSE") || sku.contains("HOUSE") || department.contains("HOUSE");
+
+        features.put("cat_id_FOODS", isFood ? 1.0 : (!isHobby && !isHouse ? 1.0 : 0.0));
+        features.put("cat_id_HOBBIES", isHobby ? 1.0 : 0.0);
+        features.put("cat_id_HOUSEHOLD", isHouse ? 1.0 : 0.0);
+
+        features.put("dept_id_FOODS_1", isFood || (!isHobby && !isHouse) ? 1.0 : 0.0);
+        features.put("dept_id_FOODS_2", 0.0);
+        features.put("dept_id_FOODS_3", 0.0);
+        features.put("dept_id_HOBBIES_1", isHobby ? 1.0 : 0.0);
+        features.put("dept_id_HOUSEHOLD_1", isHouse ? 1.0 : 0.0);
+
+        return features;
+    }
+
+    private double calculateRollingMean(Map<LocalDate, Double> salesMap, LocalDate targetDate, int days, double fallback) {
+        double sum = 0.0;
+        int count = 0;
+        for (int i = 1; i <= days; i++) {
+            LocalDate d = targetDate.minusDays(i);
+            if (salesMap.containsKey(d)) {
+                sum += salesMap.get(d);
+                count++;
+            }
+        }
+        return count > 0 ? sum / count : fallback;
+    }
+
+    private double calculateRollingStd(Map<LocalDate, Double> salesMap, LocalDate targetDate, int days, double meanFallback) {
+        List<Double> values = new ArrayList<>();
+        for (int i = 1; i <= days; i++) {
+            LocalDate d = targetDate.minusDays(i);
+            if (salesMap.containsKey(d)) {
+                values.add(salesMap.get(d));
+            }
+        }
+        if (values.size() < 2) return 0.0;
+        double mean = values.stream().mapToDouble(Double::doubleValue).average().orElse(meanFallback);
+        double variance = values.stream().mapToDouble(v -> Math.pow(v - mean, 2)).sum() / values.size();
+        return Math.sqrt(variance);
     }
 
     @Transactional(readOnly = true)

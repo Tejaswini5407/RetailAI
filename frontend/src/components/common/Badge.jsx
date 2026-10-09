@@ -1,9 +1,10 @@
 import React from 'react';
 
-const Badge = ({ type = 'status', value }) => {
-  if (!value) return null;
+const Badge = ({ type = 'status', value, children }) => {
+  const badgeVal = value !== undefined && value !== null ? value : children;
+  if (badgeVal === undefined || badgeVal === null || badgeVal === '') return null;
 
-  const valUpper = String(value).toUpperCase();
+  const valUpper = String(badgeVal).toUpperCase();
 
   const getBadgeClass = () => {
     switch (valUpper) {

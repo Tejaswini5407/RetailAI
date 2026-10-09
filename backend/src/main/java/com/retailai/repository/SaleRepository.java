@@ -18,6 +18,9 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     Page<Sale> findByOrganizationId(Long organizationId, Pageable pageable);
     Optional<Sale> findByOrganizationIdAndId(Long organizationId, Long id);
     List<Sale> findByOrganizationIdAndStoreIdAndProductId(Long organizationId, Long storeId, Long productId);
+    List<Sale> findByOrganizationIdAndStoreIdAndProductIdAndSaleDateBeforeOrderBySaleDateDesc(
+        Long organizationId, Long storeId, Long productId, LocalDate saleDate
+    );
     Optional<Sale> findByOrganizationIdAndStoreIdAndProductIdAndSaleDate(
         Long organizationId, Long storeId, Long productId, LocalDate saleDate
     );
