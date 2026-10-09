@@ -16,8 +16,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-public class TenantIsolationTest {
+import com.retailai.config.AbstractIntegrationTest;
+
+public class TenantIsolationTest extends AbstractIntegrationTest {
 
     @Autowired private OrganizationRepository orgRepo;
     @Autowired private StoreRepository storeRepo;

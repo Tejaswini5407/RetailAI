@@ -1,0 +1,59 @@
+graph TD
+    %% Client Layer
+    subgraph ClientLayer ["1. Client & Frontend Layer"]
+        Browser["User Browser / Client"]
+        ReactApp["React 18 + Vite SPA (Port 3000)"]
+    end
+
+    %% Backend Layer
+    subgraph BackendLayer ["2. Spring Boot Backend Service (Port 8080)"]
+        subgraph SecurityModule ["Security & Gateway"]
+            CORS["CORS Filter"]
+            JWT["JWT Authentication Filter"]
+            AuthSvc["Auth Service"]
+            ErrHandler["Global Exception Handler"]
+        end
+
+        subgraph CoreServices ["Business Logic Services"]
+            ForecastSvc["Forecast Service"]
+            InventorySvc["Inventory Service"]
+            ProductSvc["Product & Store Services"]
+            ImportSvc["Data Import Service"]
+        end
+
+        subgraph Integration ["ML Integration Client"]
+            MLClient["ML Inference Client (RestClient)"]
+        end
+    end
+
+    %% Storage Layer
+    subgraph DatabaseLayer ["3. Storage Layer"]
+        PostgreSQL[("PostgreSQL 17 Database: retailai_db / retailai_test_db")]
+        Flyway["Flyway Auto-Migrations: V1 Schema & V2 Seed"]
+    end
+
+    %% ML Service Layer
+    subgraph MLLayer ["4. FastAPI ML Inference Service (Port 8000)"]
+        FastAPI["FastAPI App Engine"]
+        InferenceAPI["Predict Endpoint: POST /predict"]
+        ExplainAPI["Explain Endpoint: GET /explain"]
+        ModelArtifact[("Random Forest Model: best_model_random_forest.joblib")]
+    end
+
+    %% Flow Connections
+    Browser -->|HTTP / SPA Navigation| ReactApp
+    ReactApp -->|REST API Calls| CORS
+    CORS --> JWT
+    JWT --> CoreServices
+    AuthSvc --> JWT
+    CoreServices --> ErrHandler
+
+    CoreServices -->|Spring Data JPA / Hibernate| PostgreSQL
+    Flyway -->|Auto Schema Migration| PostgreSQL
+
+    ForecastSvc -->|HTTP REST Call| MLClient
+    MLClient -->|POST /predict| InferenceAPI
+    InferenceAPI --> FastAPI
+    ExplainAPI --> FastAPI
+    FastAPI -->|Load Model & Run Inference| ModelArtifact
+    FastAPI -->|Return Forecast Payload| MLClient

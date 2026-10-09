@@ -32,8 +32,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 
-@SpringBootTest
-public class ForecastHistoryAndAccuracyTest {
+import com.retailai.config.AbstractIntegrationTest;
+
+public class ForecastHistoryAndAccuracyTest extends AbstractIntegrationTest {
 
     @Autowired private ForecastService forecastService;
     @Autowired private AuthService authService;

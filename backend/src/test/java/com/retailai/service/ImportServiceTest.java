@@ -23,8 +23,9 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-public class ImportServiceTest {
+import com.retailai.config.AbstractIntegrationTest;
+
+public class ImportServiceTest extends AbstractIntegrationTest {
 
     @Autowired private ImportService importService;
     @Autowired private AuthService authService;

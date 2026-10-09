@@ -1,0 +1,40 @@
+flowchart TD
+    subgraph Step1 ["Step 1: Data Ingestion & Storage"]
+        A1["User Uploads Sales / Catalog CSV"] --> A2["React Frontend Import Center"]
+        A2 -->|POST /api/v1/import| A3["Spring Boot DataImportService"]
+        A3 -->|Validate & Parse Rows| A4["Persist Sales, Products & Stores"]
+        A4 -->|Save Records| A5[("PostgreSQL Database: sales_history, products, stores")]
+    end
+
+    subgraph Step2 ["Step 2: Forecast Request & Feature Construction"]
+        B1["User Triggers Forecast on React UI"] --> B2["Spring Boot ForecastService: POST /api/v1/forecasts"]
+        B2 -->|Assemble Features| B3["buildInferenceFeatures()"]
+        A5 -.->|Fetch Historical Sales Context| B2
+    end
+
+    subgraph Step3 ["Step 3: Machine Learning Inference"]
+        B3 -->|HTTP REST Payload| C1["ML Inference Client (RestClient)"]
+        C1 -->|POST /predict| C2["FastAPI ML Service"]
+        C2 -->|Pass Feature Vector| C3["Random Forest Regressor Engine"]
+        C4[("Model Weights: best_model_random_forest.joblib")] -->|Load Weights| C3
+        C3 -->|Return Predicted Demand & Factors| C5["Inference Payload Response"]
+    end
+
+    subgraph Step4 ["Step 4: Risk Assessment & Persistence"]
+        C5 -->|JSON Response| D1["Spring Boot Backend"]
+        D1 -->|Save Prediction| D2[("PostgreSQL: forecast_history")]
+        D1 -->|Evaluate Stock Levels| D3["Inventory Risk Engine: Stock vs Demand"]
+        D3 -->|Categorize Status| D4["Risk Classification: Understock / Overstock / Optimal"]
+    end
+
+    subgraph Step5 ["Step 5: Frontend Visual Display"]
+        D4 -->|JSON Response| E1["React Frontend UI"]
+        E1 -->|Render KPI Summary| E2["Predicted Sales Demand Card"]
+        E1 -->|Render Multi-Day Chart| E3["Recharts Bar Chart"]
+        E1 -->|Display Action Badges| E4["Inventory Reorder Recommendations"]
+    end
+
+    Step1 --> Step2
+    Step2 --> Step3
+    Step3 --> Step4
+    Step4 --> Step5

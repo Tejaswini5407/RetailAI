@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('retailai_token') || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [errorDetails, setErrorDetails] = useState(null);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -41,6 +42,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     setError(null);
+    setErrorDetails(null);
     try {
       const data = await authApi.login(credentials);
       const jwtToken = data.accessToken || data.token;
@@ -52,14 +54,28 @@ export const AuthProvider = ({ children }) => {
       setUser(meData);
       return meData;
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Login failed. Please check credentials.';
+      const responseData = err.response?.data;
+      const errorCode = responseData?.code;
+      const httpStatus = err.response?.status;
+      const msg = responseData?.message || err.message || 'Login failed. Please check credentials.';
+      const isOrgNotFound = errorCode === 'ORGANIZATION_NOT_FOUND' || httpStatus === 404;
+
+      const details = {
+        code: errorCode,
+        status: httpStatus,
+        message: msg,
+        isOrgNotFound
+      };
+
       setError(msg);
-      throw new Error(msg);
+      setErrorDetails(details);
+      throw err;
     }
   };
 
   const register = async (registrationData) => {
     setError(null);
+    setErrorDetails(null);
     try {
       const data = await authApi.register(registrationData);
       const jwtToken = data.accessToken || data.token;
@@ -70,9 +86,11 @@ export const AuthProvider = ({ children }) => {
       setUser(meData);
       return meData;
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Registration failed.';
+      const responseData = err.response?.data;
+      const msg = responseData?.message || err.message || 'Registration failed.';
       setError(msg);
-      throw new Error(msg);
+      setErrorDetails({ code: responseData?.code, status: err.response?.status, message: msg });
+      throw err;
     }
   };
 
@@ -82,10 +100,11 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setError(null);
+    setErrorDetails(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, error, login, register, logout, setError }}>
+    <AuthContext.Provider value={{ user, token, loading, error, errorDetails, login, register, logout, setError, setErrorDetails }}>
       {children}
     </AuthContext.Provider>
   );

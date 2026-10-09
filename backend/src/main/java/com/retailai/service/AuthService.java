@@ -114,15 +114,19 @@ public class AuthService {
         String reqEmail = request.getEmail() != null ? request.getEmail().trim() : "";
         String reqOrgCode = request.getOrganizationCode() != null ? request.getOrganizationCode().trim() : "";
 
-        User user = userRepository.findByEmailIgnoreCase(reqEmail)
-                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+        if (reqOrgCode.isBlank() || !organizationRepository.existsByCodeIgnoreCase(reqOrgCode)) {
+            throw new OrganizationNotFoundException("This organization code is not registered. Please register your organization before logging in.");
+        }
 
-        if (user.getOrganization() == null || reqOrgCode.isBlank() || !user.getOrganization().getCode().equalsIgnoreCase(reqOrgCode)) {
-            throw new InvalidCredentialsException("Invalid email or password");
+        User user = userRepository.findByEmailIgnoreCase(reqEmail)
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid organization code, email, or password"));
+
+        if (user.getOrganization() == null || !user.getOrganization().getCode().equalsIgnoreCase(reqOrgCode)) {
+            throw new InvalidCredentialsException("Invalid organization code, email, or password");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new InvalidCredentialsException("Invalid email or password");
+            throw new InvalidCredentialsException("Invalid organization code, email, or password");
         }
 
         CustomUserDetails userDetails = new CustomUserDetails(user);

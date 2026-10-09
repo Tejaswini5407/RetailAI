@@ -26,9 +26,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import static org.assertj.core.api.Assertions.assertThat;
+import com.retailai.config.AbstractIntegrationTest;
+
 @AutoConfigureMockMvc
-public class AuthenticationAndSecurityTest {
+public class AuthenticationAndSecurityTest extends AbstractIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private AuthService authService;
@@ -281,15 +284,35 @@ public class AuthenticationAndSecurityTest {
     }
 
     @Test
-    @DisplayName("Login with mismatched organization code fails with 401 Unauthorized")
-    void testLoginMismatchedOrgCodeFails() throws Exception {
-        RegisterRequest req = new RegisterRequest("ORG-VALID", "Valid Org", "User Valid", "user@valid.com", "pass12345", UserRole.ADMIN);
+    @DisplayName("Login with unknown organization code returns 404 Not Found with user-friendly registration guidance")
+    void testLoginUnknownOrganizationCodeFails() throws Exception {
+        String loginJson = """
+            {
+                "organizationCode": "ORG-NONEXISTENT",
+                "email": "user@nonexistent.com",
+                "password": "Password123!"
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.code").value("ORGANIZATION_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("This organization code is not registered. Please register your organization before logging in."));
+    }
+
+    @Test
+    @DisplayName("Login with valid organization but incorrect user credentials returns 401 Unauthorized")
+    void testLoginValidOrganizationIncorrectCredentialsFails() throws Exception {
+        RegisterRequest req = new RegisterRequest("ORG-VALID-USER", "Valid User Org", "Valid User", "user@validuser.com", "pass12345", UserRole.ADMIN);
         authService.register(req);
 
         String loginJson = """
             {
-                "organizationCode": "ORG-OTHER",
-                "email": "user@valid.com",
+                "organizationCode": "ORG-VALID-USER",
+                "email": "wronguser@validuser.com",
                 "password": "pass12345"
             }
             """;
@@ -298,7 +321,34 @@ public class AuthenticationAndSecurityTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("Unauthorized"));
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.message").value("Invalid organization code, email, or password"));
+    }
+
+    @Test
+    @DisplayName("Login with mismatched organization code returns 401 Unauthorized")
+    void testLoginMismatchedOrgCodeFails() throws Exception {
+        RegisterRequest reqA = new RegisterRequest("ORG-VALID-A", "Org A", "User A", "userA@test.com", "pass12345", UserRole.ADMIN);
+        authService.register(reqA);
+        RegisterRequest reqB = new RegisterRequest("ORG-VALID-B", "Org B", "User B", "userB@test.com", "pass12345", UserRole.ADMIN);
+        authService.register(reqB);
+
+        String loginJson = """
+            {
+                "organizationCode": "ORG-VALID-B",
+                "email": "userA@test.com",
+                "password": "pass12345"
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginJson))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.message").value("Invalid organization code, email, or password"));
     }
 
     @Test
@@ -319,7 +369,9 @@ public class AuthenticationAndSecurityTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(loginJson))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("Unauthorized"));
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.message").value("Invalid organization code, email, or password"));
     }
 
     @Test
@@ -343,5 +395,51 @@ public class AuthenticationAndSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
                 .andExpect(header().string("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS"));
+    }
+
+    @Test
+    @DisplayName("JwtService throws IllegalStateException when default dev secret is used in prod profile")
+    void testProductionProfileWithDefaultJwtSecretThrowsException() {
+        String defaultDevSecret = "c3VwZXItc2VjcmV0LWF1dGhlbnRpY2F0aW9uLWtleS1mb3ItcmV0YWlsYWktc2Fhcy1wbGF0Zm9ybS0yNTZiaXQ=";
+        assertThrows(IllegalStateException.class, () -> {
+            new JwtService(defaultDevSecret, 86400000L, "prod");
+        });
+    }
+
+    @Test
+    @DisplayName("Spring Application Context fails to load in 'prod' profile when default JWT secret is used")
+    void testSpringContextFailsInProdProfileWithDefaultJwtSecret() {
+        ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+                .withPropertyValues(
+                    "spring.profiles.active=prod",
+                    "jwt.secret=c3VwZXItc2VjcmV0LWF1dGhlbnRpY2F0aW9uLWtleS1mb3ItcmV0YWlsYWktc2Fhcy1wbGF0Zm9ybS0yNTZiaXQ=",
+                    "jwt.expiration-ms=86400000"
+                )
+                .withBean(JwtService.class);
+
+        contextRunner.run(context -> {
+            assertThat(context).hasFailed();
+            assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(IllegalStateException.class);
+            Throwable rootCause = org.springframework.core.NestedExceptionUtils.getRootCause(context.getStartupFailure());
+            assertThat(rootCause).isNotNull().hasMessageContaining("Production profile ('prod') is using the default development JWT secret key");
+        });
+    }
+
+    @Test
+    @DisplayName("Spring Application Context loads successfully in 'prod' profile when a custom strong JWT secret is configured")
+    void testSpringContextSucceedsInProdProfileWithCustomJwtSecret() {
+        String customStrongSecret = "Y3VzdG9tLXNlY3VyZS1wcm9kdWN0aW9uLWp3dC1zaWduaW5nLWtleS0yNTZiaXQtc3Ryb25n";
+        ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+                .withPropertyValues(
+                    "spring.profiles.active=prod",
+                    "jwt.secret=" + customStrongSecret,
+                    "jwt.expiration-ms=86400000"
+                )
+                .withBean(JwtService.class);
+
+        contextRunner.run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context).hasSingleBean(JwtService.class);
+        });
     }
 }

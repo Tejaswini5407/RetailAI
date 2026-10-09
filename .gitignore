@@ -14,6 +14,7 @@ desktop.ini
 
 # Build Outputs & Logs
 logs/
+scratch/
 *.log
 
 # Java / Maven (Backend)

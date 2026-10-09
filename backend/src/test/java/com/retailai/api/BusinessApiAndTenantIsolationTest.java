@@ -35,9 +35,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import java.util.List;
 import java.util.Map;
 
-@SpringBootTest
+import com.retailai.config.AbstractIntegrationTest;
+
 @AutoConfigureMockMvc
-public class BusinessApiAndTenantIsolationTest {
+public class BusinessApiAndTenantIsolationTest extends AbstractIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @MockBean private RestTemplate restTemplate;

@@ -16,8 +16,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-public class PersistenceTest {
+import com.retailai.config.AbstractIntegrationTest;
+
+public class PersistenceTest extends AbstractIntegrationTest {
 
     @Autowired private OrganizationRepository orgRepo;
     @Autowired private UserRepository userRepo;

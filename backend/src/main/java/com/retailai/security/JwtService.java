@@ -21,14 +21,26 @@ import java.util.Date;
 public class JwtService {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
+    private static final String DEFAULT_DEV_SECRET = "c3VwZXItc2VjcmV0LWF1dGhlbnRpY2F0aW9uLWtleS1mb3ItcmV0YWlsYWktc2Fhcy1wbGF0Zm9ybS0yNTZiaXQ=";
 
     private final SecretKey secretKey;
     private final long expirationMs;
 
     public JwtService(
         @Value("${jwt.secret}") String secretString,
-        @Value("${jwt.expiration-ms}") long expirationMs
+        @Value("${jwt.expiration-ms}") long expirationMs,
+        @Value("${spring.profiles.active:dev}") String activeProfile
     ) {
+        if (secretString != null && DEFAULT_DEV_SECRET.equalsIgnoreCase(secretString.trim())) {
+            if ("prod".equalsIgnoreCase(activeProfile) || "production".equalsIgnoreCase(activeProfile)) {
+                throw new IllegalStateException(
+                    "CRITICAL SECURITY FAILURE: Production profile ('" + activeProfile + "') is using the default development JWT secret key. " +
+                    "Configure the JWT_SECRET environment variable with a strong, random 256-bit secret key before launching in production."
+                );
+            } else {
+                logger.warn("SECURITY WARNING: Using default development JWT secret key. Ensure JWT_SECRET environment variable is set in production.");
+            }
+        }
         this.secretKey = initSecretKey(secretString);
         this.expirationMs = expirationMs;
     }

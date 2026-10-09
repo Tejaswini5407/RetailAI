@@ -10,7 +10,7 @@ const Login = () => {
     password: ''
   });
   const [loading, setLoading] = useState(false);
-  const { login, error, setError } = useAuth();
+  const { login, error, errorDetails, setError } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -47,11 +47,24 @@ const Login = () => {
 
         <h2 className="text-xl font-semibold mb-3">Sign In</h2>
 
-        <ErrorMessage message={error} />
+        {errorDetails?.isOrgNotFound ? (
+          <div className="alert alert-warning mb-3 p-3 text-start border-start border-4 border-warning">
+            <div className="fw-bold text-dark mb-1">
+              {error || 'This organization code is not registered. Please register your organization before logging in.'}
+            </div>
+            <div className="mt-2">
+              <Link to="/register" className="btn btn-primary btn-sm font-semibold text-white text-decoration-none">
+                Register Organization →
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <ErrorMessage message={error} />
+        )}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Organization Code</label>
+          <div className="form-group mb-3">
+            <label className="form-label font-semibold">Organization Code</label>
             <input
               type="text"
               name="organizationCode"
@@ -63,8 +76,8 @@ const Login = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Email Address</label>
+          <div className="form-group mb-3">
+            <label className="form-label font-semibold">Email Address</label>
             <input
               type="email"
               name="email"
@@ -76,8 +89,8 @@ const Login = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Password</label>
+          <div className="form-group mb-3">
+            <label className="form-label font-semibold">Password</label>
             <input
               type="password"
               name="password"
