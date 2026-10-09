@@ -52,6 +52,8 @@ public class ImportService {
     @Transactional(readOnly = true)
     public ImportPreviewResponseDto previewImport(MultipartFile file, String importType) {
         Long tenantId = TenantContext.getTenantId();
+        organizationRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found for ID: " + tenantId));
         List<Map<String, String>> rows = parseCsv(file);
 
         List<ValidationErrorDto> errors = new ArrayList<>();
